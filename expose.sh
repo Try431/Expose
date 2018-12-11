@@ -10,13 +10,13 @@ if [ -f "$topdir/_config.sh" ]; then
   . "$topdir/_config.sh"
 fi
 
-site_title=${site_title:-"My Awesome Photos"}
+site_title=${site_title:-"Ramblings of a Not-Quite Photographer"}
 
 theme_dir=${theme_dir:-"theme1"}
 
 # widths to scale images to (heights are calculated from source images)
 # you might want to change this for example, if your images aren't full screen on the browser side
-resolution=(3840 2560 1920 1280 1024 640)
+resolution=(3840 1920 1280 1024)
 
 # jpeg compression quality for static photos
 jpeg_quality=${jpeg_quality:-92}
@@ -25,7 +25,7 @@ jpeg_quality=${jpeg_quality:-92}
 autorotate=${autorotate:-true}
 
 # formats to encode to, list in order of preference. Available formats are vp9, vp8, h264, h265, ogv
-video_formats=(h264 vp8)
+video_formats=(h264)
 
 # video quality - target bitrates in MBit/s matched to each resolution
 # feel free to ignore this if you don't have any videos.
@@ -64,7 +64,7 @@ disqus_shortname=${disqus_shortname:-""}
 video_extensions=(3g2 3gp 3gp2 asf avi dvr-ms exr ffindex ffpreset flv gxf h261 h263 h264 h265 ifv m2t m2ts mts m4v mkv mod mov mp4 mpg mxf tod vob webm wmv y4m)
 
 sequence_keyword=${sequence_keyword:-"imagesequence"} # if a directory name contains this keyword, treat it as an image sequence and compile it into a video
-sequence_framerate=${sequence_framerate:-24} # sequence framerat
+sequence_framerate=${sequence_framerate:-24} # sequence framerate
 
 # specific codec options here
 h264_encodespeed=${h264_encodespeed:-"veryslow"} # h264 encode speed, slower produces better compression results. Options are ultrafast,superfast, veryfast, faster, fast, medium, slow, slower, veryslow
@@ -594,7 +594,7 @@ do
 	html=$(template "$html" sitetitle "$site_title")
 	html=$(template "$html" gallerytitle "${nav_name[i]}")
 	
-	html=$(template "$html" disqus_shortname "$disqus_shortname")
+	# html=$(template "$html" disqus_shortname "$disqus_shortname")
 	
 	resolutionstring=$(printf "%s " "${resolution[@]}")
 	html=$(template "$html" resolution "$resolutionstring")
@@ -696,7 +696,7 @@ do
 	fi
 	
 	html=$(template "$html" basepath "$basepath")
-	html=$(template "$html" disqus_identifier "${nav_url[i]}")
+	# html=$(template "$html" disqus_identifier "${nav_url[i]}")
 	
 	# set default values for {{XXX:default}} strings
 	html=$(echo "$html" | sed "s/{{[^{}]*:\([^}]*\)}}/\1/g")
@@ -712,7 +712,7 @@ done
 
 basepath="./"
 firsthtml=$(template "$firsthtml" basepath "$basepath")
-firsthtml=$(template "$firsthtml" disqus_identifier "$firstpath")
+# firsthtml=$(template "$firsthtml" disqus_identifier "$firstpath")
 firsthtml=$(template "$firsthtml" resourcepath "$firstpath/")
 firsthtml=$(echo "$firsthtml" | sed "s/{{[^{}]*:\([^}]*\)}}/\1/g")
 firsthtml=$(echo "$firsthtml" | sed "s/{{[^}]*}}//g; s/<ul><\/ul>//g")
