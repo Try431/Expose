@@ -226,6 +226,17 @@ $(document).ready(function(){
 		window.open(resourcepath + url+'/'+url+'.zip');
 		return false;
 	});
+
+	// toggle modal
+	$('.slide').click(function() {
+		var img_src = $(this).find('img.image').attr('src');
+		$('#modal-div').show();
+		$('#image-modal').attr('src',img_src);
+	})
+
+	$('.modal').click(function() {
+		$('#modal-div').hide();
+	})
 	
 	// text toggle
 	$('#textbutton').click(function(){
