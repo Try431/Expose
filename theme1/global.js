@@ -5,6 +5,10 @@ var videoloadnext=2; // preload videos less
 
 var resourcepath;
 
+var modal_deg = 0;
+var current_modal;
+var modal_rotation_map = {};
+
 var current_resolution = 1920;
 var resolution = [];
 
@@ -230,12 +234,36 @@ $(document).ready(function(){
 	// toggle modal
 	$('.slide').click(function() {
 		var img_src = $(this).find('img.image').attr('src');
+		current_modal = img_src;
+		// if the modal hasn't already been created
+		if ( !(img_src in modal_rotation_map) ) {
+			modal_rotation_map[img_src] = 0
+		}
+		rotateModal(modal_rotation_map[img_src]);
 		$('#modal-div').show();
 		$('#image-modal').attr('src',img_src);
 	})
 
-	$('.modal').click(function() {
+	// $('.modal').click(function() {
+	// 	console.log($(this))
+	// 	if ( !($(this).is('.button')) ) {
+	// 		$('#modal-div').hide();
+	// 	}
+	// })
+
+	$('.close').click(function() {
 		$('#modal-div').hide();
+	})
+
+	$('.button').click(function() {
+		modal_deg = modal_rotation_map[current_modal]
+		if ($(this).is("#left")) {
+			modal_deg = (modal_deg - 90) % 360;
+		  } else {
+			modal_deg = (modal_deg + 90) % 360;
+		  }
+		  modal_rotation_map[current_modal] = modal_deg
+		  rotateModal(modal_deg);
 	})
 	
 	// text toggle
@@ -269,6 +297,22 @@ $(document).ready(function(){
 	});
 	
 });
+
+function rotateModal(modal_deg) {
+	console.log(modal_deg)
+	var translate = 0 
+	if (modal_deg == 90 || modal_deg == -270) {
+		translate = 20
+	} else if (modal_deg == 270 || modal_deg == -90) {
+		translate = -20
+	}
+	console.log(translate)
+	$("#image-modal").css({
+		"-webkit-transform": "rotate(" + modal_deg + "deg translate("+translate+"%))",
+		"-moz-transform": "rotate(" + modal_deg + "deg translate("+translate+"%))",
+		transform: "rotate(" + modal_deg + "deg) translate("+translate+"%)"
+	  });
+}
 
 function scrollcheck(){
 

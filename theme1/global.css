@@ -332,7 +332,7 @@ background-color: #000;
 	margin: 40px 70px 70px 70px;
 }
 
-.close{
+/* .close{
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -344,7 +344,7 @@ background-color: #000;
 
 .close:hover{
 	background-color: #444;
-}
+} */
 
 /* share */
 #share, #resolution{
@@ -674,8 +674,8 @@ min-width: 1px;
 .modal {
   display: none; /* Hidden by default */
   position: fixed; /* Stay in place */
-  z-index: 99; /* Sit on top */
-  padding-top: 100px; /* Location of the box */
+  z-index: 10; /* Sit on top */
+  padding-top: 2%; /* Location of the box */
   left: 0;
   top: 0;
   width: 100%; /* Full width */
@@ -689,16 +689,64 @@ min-width: 1px;
 .modal-content {
   margin: auto;
   display: block;
-  width: 81%;
+  /* overflow: scroll; */
+  width: 83%;
   /* max-width: 700px; */
 }
 
-.modal-content {
+/* .modal-content {
   animation-name: zoom;
   animation-duration: 0.6s;
-}
+} */
 
-@keyframes zoom {
+/* @keyframes zoom {
 	from {transform:scale(0)}
 	to {transform:scale(1)}
-  }
+  } */
+
+.close {
+	position: absolute;
+	top: 15px;
+	right: 35px;
+	color: #f1f1f1;
+	font-size: 40px;
+	font-weight: bold;
+	transition: 0.3s;
+}
+
+.close:hover,
+.close:focus {
+	color: #bbb;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.modal #left {
+	position:absolute;
+	top: 87%;
+	left: 10%;
+	z-index: 15;
+	background: none;
+	border: none;
+	outline: none;
+	cursor: pointer;
+	width: 3%;
+	height: 3%;
+	/* width: 20px;
+	height: 20px; */
+}
+
+.modal #right {
+	position:absolute;
+	top: 87%;
+	right: 10%;
+	z-index: 15;
+	background: none;
+	border: none;
+	outline: none;
+	cursor: pointer;
+	width: 3%;
+	height: 3%;
+	/* width: 20px;
+	height: 20px; */
+}
