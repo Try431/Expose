@@ -9,6 +9,10 @@ var modal_deg;
 var current_modal;
 var modal_rotation_map = {};
 
+var cursor_ptr = 0;
+var horizontal_cursor_array = ["url(./img/arrow_cursor.png), auto","url(./img/arrow_cursor_2.png), auto","url(./img/arrow_cursor_4.png), auto","url(./img/arrow_cursor_6.png), auto"]
+var cursor_timer = null;
+
 var current_resolution = 1920;
 var resolution = [];
 
@@ -230,6 +234,26 @@ $(document).ready(function(){
 		window.open(resourcepath + url+'/'+url+'.zip');
 		return false;
 	});
+
+	// changes the cursor to a spinning arrow when on top of a horizontal image that can be rotated
+	$('.horizontal').mouseenter(function cursor() {
+
+		$('.horizontal').css("cursor",horizontal_cursor_array[cursor_ptr])
+		console.log(horizontal_cursor_array[cursor_ptr])
+		cursor_ptr++
+		if(cursor_ptr == horizontal_cursor_array.length) {
+			cursor_ptr = 0;
+		}
+		cursor_timer = setTimeout(cursor, 250)
+	})
+
+	// this kills the cursor function once the mouse leaves a horizontal image
+	$('.horizontal').mouseleave(function() {
+		if (cursor_timer !== null) {
+			clearTimeout(cursor_timer)
+			cursor_timer = null;
+		}
+	})
 
 	// toggle modal
 	$('.horizontal').click(function() {
