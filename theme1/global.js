@@ -5,7 +5,7 @@ var videoloadnext=2; // preload videos less
 
 var resourcepath;
 
-var modal_deg = 0;
+var modal_deg;
 var current_modal;
 var modal_rotation_map = {};
 
@@ -232,16 +232,16 @@ $(document).ready(function(){
 	});
 
 	// toggle modal
-	$('.slide').click(function() {
+	$('.horizontal').click(function() {
 		var img_src = $(this).find('img.image').attr('src');
 		current_modal = img_src;
 		// if the modal hasn't already been created
 		if ( !(img_src in modal_rotation_map) ) {
-			modal_rotation_map[img_src] = 0
+			modal_rotation_map[img_src] = 90
 		}
 		rotateModal(modal_rotation_map[img_src]);
-		$('#modal-div').show();
 		$('#image-modal').attr('src',img_src);
+		$('#modal-div').show();
 	})
 
 	// get out of modal mode iff you click on the modal-div (e.g., excludes the image and buttons)
@@ -295,14 +295,12 @@ $(document).ready(function(){
 });
 
 function rotateModal(modal_deg) {
-	console.log(modal_deg)
 	var translate = 0 
 	if (modal_deg == 90 || modal_deg == -270) {
-		translate = 22
+		translate = 13
 	} else if (modal_deg == 270 || modal_deg == -90) {
-		translate = -22
+		translate = -13
 	}
-	console.log(translate)
 	$("#image-modal").css({
 		"-webkit-transform": "rotate(" + modal_deg + "deg translate("+translate+"%))",
 		"-moz-transform": "rotate(" + modal_deg + "deg translate("+translate+"%))",

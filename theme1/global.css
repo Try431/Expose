@@ -432,6 +432,9 @@ height: auto;
 clear: both;
 overflow: hidden;
 position: relative;
+}
+
+.horizontal {
 cursor: pointer;
 }
 
