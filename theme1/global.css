@@ -422,6 +422,7 @@ z-index: 1;
 position: relative;
 }
 
+
 .slide, #comments{
 float: left;
 margin: 0;
@@ -431,6 +432,7 @@ height: auto;
 clear: both;
 overflow: hidden;
 position: relative;
+cursor: pointer;
 }
 
 #comments{
@@ -675,7 +677,7 @@ min-width: 1px;
   display: none; /* Hidden by default */
   position: fixed; /* Stay in place */
   z-index: 10; /* Sit on top */
-  padding-top: 2%; /* Location of the box */
+  /*padding-top: 3%; /* Location of the box */
   left: 0;
   top: 0;
   width: 100%; /* Full width */
@@ -689,9 +691,7 @@ min-width: 1px;
 .modal-content {
   margin: auto;
   display: block;
-  /* overflow: scroll; */
   width: 83%;
-  /* max-width: 700px; */
 }
 
 /* .modal-content {
@@ -704,7 +704,7 @@ min-width: 1px;
 	to {transform:scale(1)}
   } */
 
-.close {
+/* .close {
 	position: absolute;
 	top: 15px;
 	right: 35px;
@@ -719,6 +719,14 @@ min-width: 1px;
 	color: #bbb;
 	text-decoration: none;
 	cursor: pointer;
+} */
+
+#modal-div {
+	cursor: pointer;
+}
+
+#image-modal {
+	cursor: default;
 }
 
 .modal #left {
@@ -732,8 +740,6 @@ min-width: 1px;
 	cursor: pointer;
 	width: 3%;
 	height: 3%;
-	/* width: 20px;
-	height: 20px; */
 }
 
 .modal #right {
@@ -747,6 +753,4 @@ min-width: 1px;
 	cursor: pointer;
 	width: 3%;
 	height: 3%;
-	/* width: 20px;
-	height: 20px; */
 }

@@ -244,17 +244,13 @@ $(document).ready(function(){
 		$('#image-modal').attr('src',img_src);
 	})
 
-	// $('.modal').click(function() {
-	// 	console.log($(this))
-	// 	if ( !($(this).is('.button')) ) {
-	// 		$('#modal-div').hide();
-	// 	}
-	// })
-
-	$('.close').click(function() {
+	// get out of modal mode iff you click on the modal-div (e.g., excludes the image and buttons)
+	$('#modal-div').click(function(e){
+		// https://stackoverflow.com/a/36876862/3614985
+		if(e.target !== e.currentTarget) return;
 		$('#modal-div').hide();
 	})
-
+	
 	$('.button').click(function() {
 		modal_deg = modal_rotation_map[current_modal]
 		if ($(this).is("#left")) {
@@ -302,9 +298,9 @@ function rotateModal(modal_deg) {
 	console.log(modal_deg)
 	var translate = 0 
 	if (modal_deg == 90 || modal_deg == -270) {
-		translate = 20
+		translate = 22
 	} else if (modal_deg == 270 || modal_deg == -90) {
-		translate = -20
+		translate = -22
 	}
 	console.log(translate)
 	$("#image-modal").css({
