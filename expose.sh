@@ -31,7 +31,7 @@ video_formats=(h264)
 # feel free to ignore this if you don't have any videos.
 # the defaults are about 3x vimeo/youtube bitrates to match photographic quality. Personal tolerance to compression artefacts vary, so adjust to taste.
 
-bitrate=(40 24 12 7)
+bitrate=(42 35 16 7)
 
 bitrate_maxratio=${bitrate_maxratio:-2} # a multiple of target bitrate to get max bitrate for VBR encoding. must be > 1. Higher ratio gives better quality on scenes with lots of movement. Ratio=1 reduces to CBR encoding
 
