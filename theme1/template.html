@@ -1,23 +1,28 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 	<head>
-		<meta http-equiv="X-UA-Compatible" content="IE=Edge"/> 
+		<meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	    <meta property='og:title' content='CHANGE ME'/>
-	    <meta property='og:image' content='https://www.idgarza.com/CHANGE ME.jpg'/>
-	    <meta property='og:description' content='CHANGE ME'/>
-	    <meta property='og:url' content='https://www.idgarza.com/CHANGE ME'/>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+	    <meta property='og:title' content='{{og_title}}'/>
+	    <meta property='og:image' content='{{og_image}}'/>
+	    <meta property='og:description' content='{{og_description}}'/>
+	    <meta property='og:url' content='{{og_url}}'/>
 
 		<title>{{sitetitle}} - {{gallerytitle}}</title>
 		<link href='https://fonts.googleapis.com/css?family=Lato:300,100' rel='stylesheet' type='text/css' />
 		<link type="text/css" rel="stylesheet" media="all" href="{{basepath}}global.css" />
+		<link rel="icon" href="{{basepath}}img/favicon.png">
 		<script src="{{basepath}}json.js"></script>
-		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+		<script src="{{basepath}}jquery.min.js"></script>
 		<script src="{{basepath}}cookie.js"></script>
+		<script src="{{basepath}}nav.js"></script>
+		<script src="{{basepath}}site.js"></script>
+		<script src="{{basepath}}viewer.js"></script>
 		<script src="{{basepath}}global.js"></script>
 	</head>
 <body data-resolution="{{resolution}}" data-respath="{{resourcepath}}">
-	
+
 <ol id="marker">
 </ol>
 
@@ -33,17 +38,15 @@
 <div id="sidebar">
 	<div class="foreground">
 		<div id="profile" class="camera icon"></div>
-		<h1>{{sitetitle}}</h1>
-		<ul id="nav">
-			{{navigation}}			 
-		</ul>
+		<h1><a href="/">{{sitetitle}}</a></h1>
+		<ul id="nav"></ul>
 	</div>
-	
+
 	<ul id="control">
 	<li><a href="#" id="resbutton"><span class="monitor icon"></span><span class="restext"></span></a></li>
 	<li style="display: {{text_toggle}}"><a href="#" id="textbutton" class="active"><span class="toggle icon"></span><span class="text">hide text</span></a></li>
 	</ul>
-			
+
 	<div class="background"></div>
 </div>
 
@@ -52,17 +55,6 @@
 
 <div id="main">
 	{{content}}
-</div>
-
-<div class="modal" id="modal-div">
-	<!-- <span class="close">&times;</span> -->
-	<button id="left" class="button">
-		<img src="img/left_arrow.png" width="100%" height="100%">
-	</button>
-	<img class="modal-content" id="image-modal" src="">
-	<button id="right" class="button">
-		<img src="img/right_arrow.png" width="100%" height="100%">
-	</button>
 </div>
 
 </body>

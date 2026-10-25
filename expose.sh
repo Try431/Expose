@@ -12,6 +12,9 @@ fi
 
 site_title=${site_title:-"Ramblings of a Not-Quite Photographer"}
 
+# used to build the og:url and og:image share-preview URLs
+site_url=${site_url:-"https://idgarza.com"}
+
 theme_dir=${theme_dir:-"theme1"}
 
 # widths to scale images to (heights are calculated from source images)
@@ -156,6 +159,8 @@ template () {
 	value=$(echo $3 | sed -e 's/\\/\\\\/g' -e 's/\//\\\//g' -e 's/&/\\\&/g') # escape sed input
 	echo "$1" | sed "s/{{$key}}/$value/g; s/{{$key:[^}]*}}/$value/g"
 }
+
+. "$scriptdir/og.sh"
 
 scratchdir=$(mktemp -d 2>/dev/null || mktemp -d -t 'exposetempdir')
 scratchdir=$(winpath "$scratchdir")
@@ -594,6 +599,51 @@ do
 	#write html file
 	html=$(template "$html" sitetitle "$site_title")
 	html=$(template "$html" gallerytitle "${nav_name[i]}")
+
+	# share-preview tags, from metadata.txt keys:
+	#   og_description: text for the preview card (defaults to gallery name)
+	#   og_cover: slide folder to use as the preview image (defaults to first)
+	#   og_path: site path of the gallery (defaults to the slugified name;
+	#            needed for galleries that live under a parent path on the site)
+	og_path_v=$(meta_value og_path "$gallery_metadata")
+	if [ -z "$og_path_v" ]
+	then
+		og_path_v=$(slugify "${nav_name[i]}")
+	fi
+	og_description_v=$(meta_value og_description "$gallery_metadata")
+	if [ -z "$og_description_v" ]
+	then
+		og_description_v="${nav_name[i]}"
+	fi
+	og_cover_v=$(meta_value og_cover "$gallery_metadata")
+	og_cover_index=0
+	for k in "${!gallery_nav[@]}"
+	do
+		if [ "${gallery_nav[k]}" = "$i" ]
+		then
+			og_cover_index="$k"
+			break
+		fi
+	done
+	if [ -z "$og_cover_v" ]
+	then
+		og_cover_v="${gallery_url[og_cover_index]}"
+	else
+		for k in "${!gallery_nav[@]}"
+		do
+			if [ "${gallery_nav[k]}" = "$i" ] && [ "${gallery_url[k]}" = "$og_cover_v" ]
+			then
+				og_cover_index="$k"
+				break
+			fi
+		done
+	fi
+	og_res_v=$(og_image_res "${gallery_maxwidth[og_cover_index]}" "${resolution[@]}")
+
+	html=$(template "$html" og_title "${nav_name[i]}")
+	html=$(template "$html" og_url "$site_url/$og_path_v/")
+	html=$(template "$html" og_description "$og_description_v")
+	html=$(template "$html" og_image "$site_url/$og_path_v/$og_cover_v/$og_res_v.jpg")
 	
 	# html=$(template "$html" disqus_shortname "$disqus_shortname")
 	

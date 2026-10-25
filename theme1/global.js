@@ -1,23 +1,31 @@
-var loadnext = 5; // preload next 5 slides
-var loadprev = 2; // keep previous 2 slides in case user scrolls up
+var loadnext = 6 // preload next 6 slides
+var loadprev = 3; // keep previous 3 slides in case user scrolls up
 
-var videoloadnext=2; // preload videos less
+var videoloadnext=8; // preload videos
 
 var resourcepath;
-
-var modal_deg;
-var current_modal;
-var modal_rotation_map = {};
-
-var cursor_ptr = 0;
-var horizontal_cursor_array = ["url(./img/arrow_cursor.png), auto","url(./img/arrow_cursor_2.png), auto","url(./img/arrow_cursor_4.png), auto","url(./img/arrow_cursor_6.png), auto"]
-var cursor_timer = null;
 
 var current_resolution = 1920;
 var resolution = [];
 
-var disqus_loaded = false;
 var current_slide = $('.slide').get(0);
+
+// true on gallery pages, false on the bio page (which shares this file)
+function isGalleryPage(){
+	return $('.slide').length > 0;
+}
+
+function phoneState(){
+	var coarse = window.matchMedia ? window.matchMedia('(pointer: coarse)').matches : false;
+	return {
+		phone: window.Site ? Site.isPhone({width: window.innerWidth, height: window.innerHeight, coarse: coarse}) : false,
+		landscape: window.innerWidth > window.innerHeight
+	};
+}
+
+function currentSlideIndex(){
+	return $('.slide').index(current_slide);
+}
 
 var video_formats={
 	h265: { extension: "mp4", type: "video/mp4; codecs=hev1.1.2.L93.B0"},
@@ -31,28 +39,23 @@ function drawtext(){
 	var screen_width = $(window).width();
 	
 	// set font size based on actual resolution, normalized at 14px/22px for 720
-	var fontsize = Math.floor(14*(screen_width/1280));
-	var lineheight = Math.floor(22*(screen_width/1280));
-	
-	if(fontsize < 11){
-		fontsize = 11;
-	}
-	
-	if(lineheight < 14){
-		lineheight = 14;
-	}
-	
+	var size = window.Site ? Site.captionFontSize(screen_width) : {fontSize: 14, lineHeight: 22};
+	var fontsize = size.fontSize;
+	var lineheight = size.lineHeight;
+
 	$('body').css('font-size',fontsize+'px');
 	$('body').css('line-height',lineheight+'px');
 	
-	// polygon boundary feature
-	$('.slide').each(function(){
-		var polygon = $(this).data('polygon');
-		
-		if(polygon && $.isArray(polygon) && polygon.length >= 3){
-			fillpolygon($(this).find('.content').eq(0),polygon);
-		}
-	});
+	// polygon boundary feature (skipped in captions-below mode)
+	if(!$('body').hasClass('captions-below')){
+		$('.slide').each(function(){
+			var polygon = $(this).data('polygon');
+
+			if(polygon && $.isArray(polygon) && polygon.length >= 3){
+				fillpolygon($(this).find('.content').eq(0),polygon);
+			}
+		});
+	}
 }
 
 function redrawtext(){
@@ -64,19 +67,29 @@ function redrawtext(){
 
 $(document).ready(function(){
 
+	// render the shared nav (nav.js + site.js) before any handlers bind to it
+	if(window.SITE_NAV && window.Site){
+		var $nav = $('#nav');
+		if($nav.length){
+			$nav.html(Site.renderNav(SITE_NAV, location.pathname));
+		}
+	}
+
+	if(isGalleryPage()){
+
 	// set slide heights to prevent reflow
 	$('.slide').each(function(){
 		$(this).css('padding-top', (100*$(this).data('imageheight')/$(this).data('imagewidth')) + '%');
 	});
-	
+
 	resourcepath = $('body').data('respath');
-	
+
 	// detect resolution
 	var saved_width = $.cookie('resolution');
 	var screen_width = $(window).width();
-	
+
 	drawtext();
-	
+
 	// build resolution selector
 	$.each(String($('body').data('resolution')).split(" "),function(i, v){
 		if(v){
@@ -144,9 +157,6 @@ $(document).ready(function(){
 	    if (!$(e.target).is('#resolution')) {
 	        $('#resolution').removeClass('active');
 	    }
-	    if (!$(e.target).is('#share')) {
-	        $('#share').removeClass('active');
-	    }
 	});
   	
 	if(saved_width){
@@ -161,36 +171,81 @@ $(document).ready(function(){
 		});
 	}
 	else{
-		// assume large->small order
-		var found = false;
-		var sidebar_width = $('#marker').width() + $('#sidebar').width();
-		// account for pixel density and sidebar width
+		// pick the smallest resolution dense enough for this screen,
+		// accounting for pixel density and (on desktop) the sidebar
+		var sidebar_width = phoneState().phone ? 0 : $('#marker').width() + $('#sidebar').width();
 		var device_ratio = window.devicePixelRatio ? window.devicePixelRatio : 1;
-		var adjusted_screen_width = ($(window).width() - sidebar_width) * device_ratio;
-		function setResolution(res){
-			$(res).trigger('click');
-			$(res).addClass('active');
-			found=true;
-		}
-		$('#resolution li').each(function(i){
-			var val = parseInt($(this).data('res'));
-			var image_density = val / adjusted_screen_width;
-			if(image_density >= 0.9) {
-				setResolution(this);
+		var target = window.Site ? Site.pickResolution(resolution, $(window).width(), device_ratio, sidebar_width) : resolution[0];
+		$('#resolution li').each(function(){
+			if(parseInt($(this).data('res')) === target){
+				$(this).trigger('click');
+				$(this).addClass('active');
+				return false;
 			}
 		});
-
-	// when largest image has density lower than threashold (large screen in use)
-	if(!found){
-		$('#resolution li').first().trigger('click');
 	}
 
+	// move the resolution flyout inside the sidebar so it renders
+	// inline in the drawer on phones (fixed position on desktop, unchanged)
+	$('#resolution').appendTo($('#sidebar .foreground'));
+
+	// lighter video preloading on phones and data-saver connections
+	if(window.Site){
+		videoloadnext = Site.videoPreloadCount({
+			phone: phoneState().phone,
+			saveData: !!(navigator.connection && navigator.connection.saveData)
+		});
 	}
-		
-	scrollcheck();
-	
+
+	// track the current slide
+	if(slideObserver){
+		$('.slide').each(function(){
+			slideObserver.observe(this);
+		});
+	}
+	else{
+		scrollcheck();
+	}
+
+	// add marker
+	var mheight = 100/$('.slide').length;
+	$('.slide').each(function(i, v){
+		var color1 = $(this).data('color1');
+		var color7 = $(this).data('color7');
+		if(!color1){
+			color1 = '#000';
+		}
+		if(!color7){
+			color7 = '#fff';
+		}
+		$('#marker').append('<li style="background-color: '+color1+'; height: '+mheight+'%"><a href="#'+(i+1)+'" style="background-color: '+color7+'"></a></li>');
+	});
+
+	// caption position toggle (phone drawer): overlay on photo vs below it
+	$('#control').append('<li class="phone-only"><a href="#" id="captionbutton"><span class="toggle icon"></span><span class="text">text on photo</span></a></li>');
+	applyCaptionMode();
+	$('#captionbutton').click(function(){
+		var next = $('body').hasClass('captions-below') ? 'overlay' : 'below';
+		$.cookie('captions', next, {expires: 365, path: '/'});
+		applyCaptionMode();
+		return false;
+	});
+
+	// tapping/clicking a slide opens the full-screen viewer;
+	// links inside captions pass through untouched
+	$('#main').on('click', '.slide', function(e){
+		if($(e.target).closest('a').length){
+			return;
+		}
+		if(window.Viewer){
+			Viewer.open($('.slide').index(this), phoneState().phone ? 'tap' : 'click');
+		}
+	});
+
+	} // isGalleryPage
+
 	// add back hover behavior erased by color changes
-	$('#sidebar a, #share a, #resolution a').not('#nav .active a').mouseenter(function(){
+	$('#sidebar a, #resolution a').not('#nav .active a').mouseenter(function(){
 		var color = $(this).css('color');
 		$(this).css('color','#ffffff');
 		$(this).data('prevcolor',color);
@@ -206,16 +261,6 @@ $(document).ready(function(){
 		$('.icon').addClass('webkit');
 	}
 	
-	$('#sharebutton').click(function(){
-		if($('#share').hasClass('active')){
-			$('#share').removeClass('active');
-		}
-		else{
-			$('#share').addClass('active');
-		}
-		$('#resolution').removeClass('active');
-		return false;
-	});
 	
 	$('#resbutton').click(function(){
 		if($('#resolution').hasClass('active')){
@@ -224,67 +269,8 @@ $(document).ready(function(){
 		else{
 			$('#resolution').addClass('active');
 		}
-		$('#share').removeClass('active');
 		return false;
 	});
-
-	// download current
-	$('#download').click(function(){
-		var url = $(current_slide).find('img.image').data('url');
-		window.open(resourcepath + url+'/'+url+'.zip');
-		return false;
-	});
-
-	// changes the cursor to a spinning arrow when on top of a horizontal image that can be rotated
-	$('.horizontal').mouseenter(function cursor() {
-
-		$('.horizontal').css("cursor",horizontal_cursor_array[cursor_ptr])
-		console.log(horizontal_cursor_array[cursor_ptr])
-		cursor_ptr++
-		if(cursor_ptr == horizontal_cursor_array.length) {
-			cursor_ptr = 0;
-		}
-		cursor_timer = setTimeout(cursor, 250)
-	})
-
-	// this kills the cursor function once the mouse leaves a horizontal image
-	$('.horizontal').mouseleave(function() {
-		if (cursor_timer !== null) {
-			clearTimeout(cursor_timer)
-			cursor_timer = null;
-		}
-	})
-
-	// toggle modal
-	$('.horizontal').click(function() {
-		var img_src = $(this).find('img.image').attr('src');
-		current_modal = img_src;
-		// if the modal hasn't already been created
-		if ( !(img_src in modal_rotation_map) ) {
-			modal_rotation_map[img_src] = 90
-		}
-		rotateModal(modal_rotation_map[img_src]);
-		$('#image-modal').attr('src',img_src);
-		$('#modal-div').show();
-	})
-
-	// get out of modal mode iff you click on the modal-div (e.g., excludes the image and buttons)
-	$('#modal-div').click(function(e){
-		// https://stackoverflow.com/a/36876862/3614985
-		if(e.target !== e.currentTarget) return;
-		$('#modal-div').hide();
-	})
-	
-	$('.button').click(function() {
-		modal_deg = modal_rotation_map[current_modal]
-		if ($(this).is("#left")) {
-			modal_deg = (modal_deg - 90) % 360;
-		  } else {
-			modal_deg = (modal_deg + 90) % 360;
-		  }
-		  modal_rotation_map[current_modal] = modal_deg
-		  rotateModal(modal_deg);
-	})
 	
 	// text toggle
 	$('#textbutton').click(function(){
@@ -298,39 +284,121 @@ $(document).ready(function(){
 			$(this).addClass('active');
 			$(this).find('.text').text('hide text');
 		}
-		
+
 		return false;
 	});
-	
-	// add marker
-	var mheight = 100/$('.slide').length;
-	$('.slide').each(function(i, v){
-		var color1 = $(this).data('color1');
-		var color7 = $(this).data('color7');
-		if(!color1){
-			color1 = '#000';
-		}
-		if(!color7){
-			color7 = '#fff';
-		}
-		$('#marker').append('<li style="background-color: '+color1+'; height: '+mheight+'%"><a href="#'+(i+1)+'" style="background-color: '+color7+'"></a></li>');
+
+	// collapsible menu: the whole sidebar becomes a drawer on phones
+	var $menubutton = $('<button id="menubutton" aria-label="Menu"><span></span><span></span><span></span></button>');
+	$('body').append($menubutton);
+	$menubutton.click(function(){
+		$('body').toggleClass('menu-open');
+		return false;
 	});
-	
+	$(document).on('click', function(e){
+		if($('body').hasClass('menu-open') && !$(e.target).closest('#sidebar, #menubutton').length){
+			closeMenu();
+		}
+	});
+	$('#nav').on('click', 'a', closeMenu);
+
+	// keyboard navigation: arrows/space/j/k move between slides on the page,
+	// left/right and Escape drive the viewer, Escape closes the menu
+	$(document).keydown(function(e){
+		if(e.ctrlKey || e.altKey || e.metaKey){
+			return;
+		}
+		var tag = (e.target.tagName || '').toLowerCase();
+		if(tag === 'input' || tag === 'textarea' || tag === 'select'){
+			return;
+		}
+		if(!window.Site){
+			return;
+		}
+		var key = e.key;
+		if(!key){
+			var keys = {32: ' ', 33: 'PageUp', 34: 'PageDown', 37: 'ArrowLeft', 38: 'ArrowUp', 39: 'ArrowRight', 40: 'ArrowDown', 74: 'j', 75: 'k'};
+			key = keys[e.which] || '';
+		}
+		var viewerOpen = window.Viewer && Viewer.isOpen();
+		var action = Site.keyAction(key, e.shiftKey, viewerOpen);
+		if(viewerOpen && action){
+			e.preventDefault();
+			if(action === 'close'){
+				Viewer.close();
+			}
+			else{
+				Viewer.go(action === 'next' ? 1 : -1);
+			}
+			return;
+		}
+		if(action && isGalleryPage()){
+			e.preventDefault();
+			var delta = action === 'next' ? 1 : -1;
+			var target = $('.slide').eq(currentSlideIndex() + delta).get(0);
+			if(target){
+				$('html, body').animate({scrollTop: $(target).offset().top}, 250);
+			}
+			return;
+		}
+		if(e.which === 27){
+			closeMenu();
+		}
+	});
+
+	// keep body.phone in sync with the viewport
+	function updatePhoneClass(){
+		$('body').toggleClass('phone', phoneState().phone);
+		applyCaptionMode();
+	}
+	updatePhoneClass();
+	$(window).on('resize orientationchange', updatePhoneClass);
+
 });
 
-function rotateModal(modal_deg) {
-	var translate = 0 
-	if (modal_deg == 90 || modal_deg == -270) {
-		translate = 13
-	} else if (modal_deg == 270 || modal_deg == -90) {
-		translate = -13
+// captions sit below the photo by default while scrolling in portrait on
+// phones; the toggle's choice persists in the 'captions' cookie
+function applyCaptionMode(){
+	var state = phoneState();
+	var mode = window.Site ? Site.captionMode($.cookie('captions'), state.phone && !state.landscape) : 'overlay';
+	var below = mode === 'below';
+	var changed = below !== $('body').hasClass('captions-below');
+	if(changed){
+		swapCaptionHtml(below);
 	}
-	$("#image-modal").css({
-		"-webkit-transform": "rotate(" + modal_deg + "deg translate("+translate+"%))",
-		"-moz-transform": "rotate(" + modal_deg + "deg translate("+translate+"%))",
-		transform: "rotate(" + modal_deg + "deg) translate("+translate+"%)"
-	  });
+	$('body').toggleClass('captions-below', below);
+	$('#captionbutton .text').text(below ? 'text on photo' : 'text below photo');
+	if(changed && isGalleryPage()){
+		redrawtext();
+	}
 }
+
+// below the photo, captions use a copy without the on-photo spacing hacks;
+// the authored html is kept in data('origHtml') for overlay mode and the viewer
+function swapCaptionHtml(below){
+	$('#main .post .content').each(function(){
+		var $c = $(this);
+		if(below){
+			if($c.data('origHtml') === undefined){
+				$c.data('origHtml', $c.html());
+			}
+			var cleaned = Site.belowCaptionHtml($c.data('origHtml'));
+			$c.html(cleaned);
+			// a caption that is empty (or emptied by the cleanup) shouldn't
+			// render a blank block below the photo
+			$c.closest('.post').toggleClass('post-empty', $.trim($('<div>').html(cleaned).text()) === '');
+		}
+		else if($c.data('origHtml') !== undefined){
+			$c.html($c.data('origHtml'));
+			$c.closest('.post').removeClass('post-empty');
+		}
+	});
+}
+
+function closeMenu(){
+	$('body').removeClass('menu-open');
+}
+
 
 function scrollcheck(){
 
@@ -347,9 +415,16 @@ function scrollcheck(){
 	});
 	
 	if(new_slide && new_slide != current_slide){
-		current_slide = new_slide;
+		activateSlide(new_slide);
+	}
+}
+
+// everything that has to happen when a new slide becomes current:
+// the image/video loading window, custom colors, and the nav marker
+function activateSlide(slide){
+		current_slide = slide;
 		var index = $('.slide').index(current_slide);
-		
+
 		$('.slide .image').removeClass('active');
 		$('.slide video').removeClass('active');
 		
@@ -413,6 +488,10 @@ function scrollcheck(){
 
 		$(current_slide).nextAll().filter('.slide').slice(0,5).find('img.image').addClass('active');
 		$(current_slide).prevAll().filter('.slide').slice(0,2).find('img.image').addClass('active');
+		$(current_slide).prevAll().filter('.slide').slice(0,2).find('video.image').addClass('active');
+		$(current_slide).nextAll().filter('.slide').slice(0,2).find('video.image').addClass('active');
+
+
 		
 		// set custom colors
 		var sidebackground = $(current_slide).data('color2');
@@ -425,19 +504,15 @@ function scrollcheck(){
 			$('#resolution').css('background-color',resbackground);
 		}
 		
-		var sharebackground = $(current_slide).data('color4');
-		if(sharebackground){
-			$('#share').css('background-color',sharebackground);
-		}
 		
 		var highcolor = $(current_slide).data('textcolor');
 		var sidecolor = $(current_slide).data('color6');
 		if(sidecolor){
-			$('#sidebar, #sidebar a, #share a, #resolution a').css('color',sidecolor);
+			$('#sidebar, #sidebar a, #resolution a').css('color',sidecolor);
 			$('#sidebar .active a, #resolution .active a').css('color',highcolor).css('border-color', highcolor);
 		}
 		
-		$('#sidebar .icon.webkit, #share .icon.webkit').css('background-color',sidecolor);
+		$('#sidebar .icon.webkit').css('background-color',sidecolor);
 				
 		// highlight nav
 		
@@ -445,9 +520,8 @@ function scrollcheck(){
 			$('#marker li.active').removeClass('active');
 			$('#marker li').eq(index).addClass('active');
 		}
-		
+
 		return false;
-	}
 }
 
 _now = Date.now || function() { return new Date().getTime(); };
@@ -482,8 +556,31 @@ throttle = function(func, wait, options) {
     };
   };
 
-var throttled = throttle(scrollcheck, 700);
-$(window).scroll(throttled);
+// slide tracking: IntersectionObserver reports visibility directly, so the
+// current slide updates instantly instead of on a throttled scroll handler
+var slideRatios = typeof Map !== 'undefined' ? new Map() : null;
+var slideObserver = null;
+if(typeof IntersectionObserver !== 'undefined' && slideRatios){
+	slideObserver = new IntersectionObserver(function(entries){
+		entries.forEach(function(e){
+			slideRatios.set(e.target, e.intersectionRatio);
+		});
+		var best = null;
+		var bestRatio = 0;
+		slideRatios.forEach(function(ratio, el){
+			if(ratio > bestRatio){
+				bestRatio = ratio;
+				best = el;
+			}
+		});
+		if(best && best !== current_slide){
+			activateSlide(best);
+		}
+	}, {threshold: [0, 0.25, 0.5, 0.75, 1]});
+}
+else{
+	$(window).scroll(throttle(scrollcheck, 700));
+}
 
 var redrawtext_throttled = throttle(redrawtext, 1000);
 $(window).resize(redrawtext_throttled);

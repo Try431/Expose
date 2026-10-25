@@ -249,3 +249,29 @@ Any unused {{xxx}} variables that did not have defaults are removed from the gen
 Any non-template files (css, images, javascript) in the theme directory are simply copied into the _site directory.
 
 To avoid additional dependencies, the YAML parser and template engine is simply a sed regex. This means that YAML metadata must take the form of simple key:value pairs, and more complex liquid template syntax are not available.
+
+---
+
+## Notes to self (idgarza.com)
+
+Keep `theme1` files in sync w/ main site repo.
+
+### Publishing steps
+
+1. `expose.sh -d` to iterate, then a real build at the end.
+2. Copy the gallery folder out of `_site/` into the site repo.
+3. Add a line to `nav.js` over in the site repo
+4. If I touched any of `global.js`, `global.css`, `cookie.js`, `json.js`, `nav.js`, `site.js`, `viewer.js`, `jquery.min.js` in the site repo, run `./sync-theme.sh` here to pull them back into `theme1`. Run `bash tests/theme_test.sh` after to make sure it actually synced.
+
+### metadata.txt keys for share previews (og:*)
+
+- `og_description:` — the preview text. If I skip it, it just uses the gallery name.
+- `og_cover:` — which slide folder to use as the preview image. Defaults to the first slide.
+- `og_path:` — the gallery's path on the real site. Only need this if the gallery is nested under a parent path (e.g. `og_path: pct--2017/the-trail`), otherwise it just slugifies the gallery name.
+
+`site_url` in `_config.sh` is the host for these URLs (default `https://idgarza.com`). Preview image picks the largest rendered size that's still <=1920px.
+
+### Tests (run these if I touch the og stuff or the sync script)
+
+- `bash tests/og_test.sh`
+- `bash tests/theme_test.sh`
