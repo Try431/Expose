@@ -261,7 +261,7 @@ Keep `theme1` files in sync w/ main site repo.
 1. `expose.sh -d` to iterate, then a real build at the end.
 2. Copy the gallery folder out of `_site/` into the site repo.
 3. Add a line to `nav.js` over in the site repo
-4. If I touched any of `global.js`, `global.css`, `cookie.js`, `json.js`, `nav.js`, `site.js`, `viewer.js`, `jquery.min.js` in the site repo, run `./sync-theme.sh` here to pull them back into `theme1`. Run `bash tests/theme_test.sh` after to make sure it actually synced. If any of them changed, also bump the `?v=` version on the shared-asset URLs in `theme1/template.html` and the site pages (see the site repo's `AGENTS.md`) — browsers cache these files hard.
+4. If I touched any of `global.js`, `global.css`, `cookie.js`, `json.js`, `nav.js`, `site.js`, `viewer.js`, `jquery.min.js` in the site repo, run `./sync-theme.sh` here to pull them back into `theme1`. Run `bash tests/theme_test.sh` after to make sure it actually synced. If any of them changed, also bump the `?v=` version on the shared-asset URLs in `theme1/template.html` and the site pages — browsers cache these files hard.
 
 ### metadata.txt keys for share previews (og:*)
 
