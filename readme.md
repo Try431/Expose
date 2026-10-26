@@ -261,7 +261,7 @@ Keep `theme1` files in sync w/ main site repo.
 1. `expose.sh -d` to iterate, then a real build at the end.
 2. Copy the gallery folder out of `_site/` into the site repo.
 3. Add a line to `nav.js` over in the site repo
-4. If I touched any of `global.js`, `global.css`, `cookie.js`, `json.js`, `nav.js`, `site.js`, `viewer.js`, `jquery.min.js` in the site repo, run `./sync-theme.sh` here to pull them back into `theme1`. Run `bash tests/theme_test.sh` after to make sure it actually synced.
+4. If I touched any of `global.js`, `global.css`, `cookie.js`, `json.js`, `nav.js`, `site.js`, `viewer.js`, `jquery.min.js` in the site repo, run `./sync-theme.sh` here to pull them back into `theme1`. Run `bash tests/theme_test.sh` after to make sure it actually synced. If any of them changed, also bump the `?v=` version on the shared-asset URLs in `theme1/template.html` and the site pages (see the site repo's `AGENTS.md`) — browsers cache these files hard.
 
 ### metadata.txt keys for share previews (og:*)
 
@@ -271,7 +271,23 @@ Keep `theme1` files in sync w/ main site repo.
 
 `site_url` in `_config.sh` is the host for these URLs (default `https://idgarza.com`). Preview image picks the largest rendered size that's still <=1920px.
 
+### Mobile-friendly video encodes
+
+By default, `expose.sh` also writes `<res>-h264-mobile.mp4` for each res in
+`mobile_video_resolutions` (default `1920 1280`). These are the same two-pass,
+same-bitrate encodes except `ref=4:bframes=3` (`mobile_x264_params`), which
+phone hardware decoders handle far better than the normal `veryslow` output.
+Framerate and `mobile_preset` (default `veryslow`) are kept. Phones load the
+`-mobile` file and fall back to the normal one. Disable with
+`mobile_video=false`.
+
+`./mobile-videos.sh <dir> [--force] [--dry-run]` batch-encodes `-mobile`
+files for an existing site, from the largest existing mp4 per video,
+matching each file's embedded bitrate. Safe to re-run — it skips outputs
+that already exist. See `mobile.sh` for the shared settings.
+
 ### Tests (run these if I touch the og stuff or the sync script)
 
 - `bash tests/og_test.sh`
 - `bash tests/theme_test.sh`
+- `bash tests/mobile_test.sh` (stubs ffmpeg; no real encodes)

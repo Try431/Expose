@@ -185,9 +185,7 @@ $(document).ready(function(){
 		});
 	}
 
-	// move the resolution flyout inside the sidebar so it renders
-	// inline in the drawer on phones (fixed position on desktop, unchanged)
-	$('#resolution').appendTo($('#sidebar .foreground'));
+	placeResolution();
 
 	// lighter video preloading on phones and data-saver connections
 	if(window.Site){
@@ -346,9 +344,22 @@ $(document).ready(function(){
 		}
 	});
 
+	// resolution options: desktop keeps the fixed flyout after #sidebar; on
+	// phones the list nests under the Resolution button and shows as chips.
+	// a no-op on the bio page, which has no #resolution/#resbutton
+	function placeResolution(){
+		if(phoneState().phone){
+			$('#resolution').appendTo($('#resbutton').closest('li'));
+		}
+		else{
+			$('#resolution').insertAfter($('#sidebar'));
+		}
+	}
+
 	// keep body.phone in sync with the viewport
 	function updatePhoneClass(){
 		$('body').toggleClass('phone', phoneState().phone);
+		placeResolution();
 		applyCaptionMode();
 	}
 	updatePhoneClass();
@@ -447,19 +458,21 @@ function activateSlide(slide){
 							var formats = String($(this).data("videoformats")).split(" ");
 							if(formats.length > 0){
 								var vidstring = '<div class="progress active"><div class="bar" style="background-color: '+$(this).parent().data('textcolor')+'"></div></div>';
-								vidstring += '<video class="image" poster="' + url+'/'+set_res+'.jpg" alt="" autoplay="autoplay" loop="loop" preload="auto" width="'+$(this).width()+'" height="'+$(this).outerHeight()+'">';
-								
-								$.each(formats, function(i, v){
-									if(v){
-										vformat = video_formats[v];
-										var sourceurl = url+'/'+set_res+'-'+v+'.'+vformat.extension;
-										vidstring += '<source src="'+sourceurl+'" type="'+vformat.type+'" data-extension="'+(v+'.'+vformat.extension)+'"></source>';
-									}
+								vidstring += '<video class="image" poster="' + url+'/'+set_res+'.jpg" alt="" autoplay="autoplay" muted="muted" playsinline loop="loop" preload="auto" width="'+$(this).width()+'" height="'+$(this).outerHeight()+'">';
+
+								// phones try the decoder-friendly -mobile encode first (site.js)
+								var sources = window.Site ? Site.videoSources({
+									base: url, res: set_res, imageWidth: parseInt($(this).data('imagewidth')),
+									formats: formats, phone: phoneState().phone, videoFormats: video_formats
+								}) : formats.map(function(v){ var f = video_formats[v]; return {src: url+'/'+set_res+'-'+v+'.'+f.extension, type: f.type}; });
+								$.each(sources, function(i, s){
+									vidstring += '<source src="'+s.src+'" type="'+s.type+'"></source>';
 								});
 								
 								vidstring += '</video>';
 								
 								$(this).append(vidstring);
+								watchVideo($(this).find('video').get(0));
 								$(this).find('video').get(0).addEventListener('progress', function() {
 									try{
 										var percent = 100 * this.buffered.end(0) / this.duration;
@@ -480,6 +493,9 @@ function activateSlide(slide){
 			else{
 				// keeping all videos takes too much memory, reset as we go along
 				$(this).find('img.image').addClass('blank');
+				$(this).find('video').each(function(){
+					unwatchVideo(this);
+				});
 				$(this).find('video, .progress').remove();
 			}
 		});
@@ -555,6 +571,81 @@ throttle = function(func, wait, options) {
       return result;
     };
   };
+
+// video playback: mounted videos buffer but only decode while visible, and
+// stay paused while the viewer is open (the viewer plays its own copy)
+var pageVideoRatios = typeof Map !== 'undefined' ? new Map() : null;
+var pageVideosMutedForViewer = false;
+var pageVideoObserver = null;
+var pageVideoPlaying = null;
+
+function syncPageVideos(){
+	if(!pageVideoRatios){
+		return;
+	}
+	// phones decode one video at a time: only the most-visible one plays
+	var phone = phoneState().phone;
+	var winner = null;
+	if(phone && window.Site){
+		var entries = [];
+		pageVideoRatios.forEach(function(ratio, v){
+			if(v.isConnected){
+				entries.push({id: v, ratio: ratio});
+			}
+		});
+		winner = Site.pickPlayingVideo(entries, pageVideoPlaying);
+		pageVideoPlaying = winner;
+	}
+	else{
+		pageVideoPlaying = null;
+	}
+	pageVideoRatios.forEach(function(ratio, v){
+		if(!v.isConnected){
+			pageVideoRatios.delete(v);
+			if(pageVideoObserver){
+				pageVideoObserver.unobserve(v);
+			}
+			return;
+		}
+		var shouldPlay = !pageVideosMutedForViewer && (phone ? v === winner : ratio >= 0.25);
+		if(shouldPlay && v.paused){
+			v.play().catch(function(){});
+		}
+		else if(!shouldPlay && !v.paused){
+			v.pause();
+		}
+	});
+}
+
+if(typeof IntersectionObserver !== 'undefined' && pageVideoRatios){
+	pageVideoObserver = new IntersectionObserver(function(entries){
+		entries.forEach(function(e){
+			pageVideoRatios.set(e.target, e.intersectionRatio);
+		});
+		syncPageVideos();
+	}, {threshold: [0, 0.25, 0.5]});
+}
+
+function watchVideo(v){
+	if(pageVideoObserver && v){
+		pageVideoObserver.observe(v);
+		pageVideoRatios.set(v, 0);
+		syncPageVideos();
+	}
+}
+
+function unwatchVideo(v){
+	if(pageVideoObserver && v){
+		pageVideoObserver.unobserve(v);
+		pageVideoRatios.delete(v);
+	}
+}
+
+// called by viewer.js on open/close
+window.pausePageVideos = function(on){
+	pageVideosMutedForViewer = !!on;
+	syncPageVideos();
+};
 
 // slide tracking: IntersectionObserver reports visibility directly, so the
 // current slide updates instantly instead of on a throttled scroll handler

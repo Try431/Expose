@@ -71,6 +71,62 @@
 		return state.phone ? 2 : 8;
 	}
 
+	// Video <source> list for a slide, in try-order.
+	// Desktop: one source per format at min(res, imageWidth), as always.
+	// Phone: the decoder-friendly "-mobile" h264 encode first (capped at
+	// 1920 = 1080p, the sizes we generate), then the normal h264 file capped
+	// at 2560 (1440p) as a fallback for unconverted galleries, then any other
+	// formats at that same capped size. Photos are unaffected — this only
+	// applies to the <video> sources.
+	var MOBILE_VIDEO_RES = 1920;
+	var PHONE_VIDEO_CAP = 2560;
+	function videoSources(opts){
+		var res = Math.min(opts.res, opts.imageWidth);
+		var out = [];
+		var videoFormats = opts.videoFormats;
+		var capped = res;
+		if (opts.phone){
+			capped = Math.min(res, PHONE_VIDEO_CAP);
+			if (opts.formats.indexOf('h264') >= 0 && videoFormats.h264){
+				out.push({
+					src: opts.base + '/' + Math.min(capped, MOBILE_VIDEO_RES) + '-h264-mobile.mp4',
+					type: videoFormats.h264.type
+				});
+			}
+		}
+		opts.formats.forEach(function(f){
+			var fmt = videoFormats[f];
+			if (!f || !fmt){
+				return;
+			}
+			out.push({src: opts.base + '/' + capped + '-' + f + '.' + fmt.extension, type: fmt.type});
+		});
+		return out;
+	}
+
+	// Which page video should be playing (phones play only one at a time).
+	// entries: [{id, ratio}]; returns the id of the most-visible video that is
+	// at least a quarter on screen, or null. The current video wins a near-tie
+	// so playback doesn't flip between two half-visible videos while scrolling.
+	function pickPlayingVideo(entries, current){
+		var best = null;
+		var bestRatio = 0;
+		var currentRatio = -1;
+		entries.forEach(function(e){
+			if (e.ratio > bestRatio){
+				bestRatio = e.ratio;
+				best = e.id;
+			}
+			if (e.id === current){
+				currentRatio = e.ratio;
+			}
+		});
+		if (currentRatio >= 0.25 && best !== null && bestRatio - currentRatio <= 0.05){
+			return current;
+		}
+		return bestRatio >= 0.25 ? best : null;
+	}
+
 	// pick the smallest resolution that is at least 90% as dense as the
 	// adjusted viewport needs; fall back to the largest available.
 	function pickResolution(resolutions, viewportWidth, dpr, sidebarWidth){
@@ -101,6 +157,41 @@
 
 	function showRotateHint(state){
 		return !state.landscape && state.imgW > state.imgH;
+	}
+
+	// Viewer zoom: a zoomed frame is transformed translate(x,y) scale(s) with
+	// transform-origin at its top-left, inside a viewport-sized slide where its
+	// unzoomed position is centered. Coordinates below are in that slide's
+	// space, so the unzoomed frame's top-left sits at ((vpW-frameW)/2, ...).
+	var ZOOM_MAX = 5;
+
+	// constrain translate so the scaled frame never pulls an edge inside the
+	// viewport; when smaller than the viewport on an axis it stays centered
+	function clampPan(state, frameW, frameH, vpW, vpH){
+		function axis(t, size, vp){
+			var o = (vp - size) / 2;
+			var span = state.scale * size;
+			if (span <= vp){
+				return (vp - span) / 2 - o;
+			}
+			return Math.min(Math.max(t, vp - span - o), -o);
+		}
+		return {
+			scale: state.scale,
+			x: axis(state.x, frameW, vpW),
+			y: axis(state.y, frameH, vpH)
+		};
+	}
+
+	// change scale while keeping the frame point under (px, py) fixed
+	function zoomAbout(state, px, py, newScale, frameW, frameH, vpW, vpH){
+		var s = Math.min(Math.max(newScale, 1), ZOOM_MAX);
+		var ox = (vpW - frameW) / 2;
+		var oy = (vpH - frameH) / 2;
+		var fx = (px - ox - state.x) / state.scale;
+		var fy = (py - oy - state.y) / state.scale;
+		return clampPan({scale: s, x: px - ox - s * fx, y: py - oy - s * fy},
+			frameW, frameH, vpW, vpH);
 	}
 
 
@@ -171,9 +262,13 @@
 		captionMode: captionMode,
 		captionFontSize: captionFontSize,
 		videoPreloadCount: videoPreloadCount,
+		videoSources: videoSources,
+		pickPlayingVideo: pickPlayingVideo,
 		pickResolution: pickResolution,
 		fitBox: fitBox,
 		showRotateHint: showRotateHint,
+		clampPan: clampPan,
+		zoomAbout: zoomAbout,
 		keyAction: keyAction
 	};
 }));

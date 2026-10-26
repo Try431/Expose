@@ -161,6 +161,7 @@ template () {
 }
 
 . "$scriptdir/og.sh"
+. "$scriptdir/mobile.sh"
 
 scratchdir=$(mktemp -d 2>/dev/null || mktemp -d -t 'exposetempdir')
 scratchdir=$(winpath "$scratchdir")
@@ -958,6 +959,39 @@ do
 					fi
 				done
 			done
+
+			# phone-friendly h264 encodes (mobile.sh): same two-pass quality
+			# but fewer ref/b-frames so mobile decoders can keep up. phones
+			# load <res>-h264-mobile.mp4, falling back to the normal file.
+			if [ "$mobile_video" = true ] && printf '%s\n' "${video_formats[@]}" | grep -qx h264
+			then
+				mobilefirst=true
+				for mres in $mobile_video_resolutions
+				do
+					if [ "$width" -ge "$mres" ] && [ ! -s "$topdir/_site/$url/$mres-h264-mobile.mp4" ]
+					then
+						# match the bitrate used for the normal file at this resolution
+						mmbit=""
+						for j in "${!resolution[@]}"
+						do
+							[ "${resolution[$j]}" = "$mres" ] && mmbit="${bitrate[$j]}"
+						done
+						mmbit=${mmbit:-7}
+						mobilelog=$(winpath "$topdir/_site/$url/ffmpeg-mobile")
+						echo -e "\tEncoding h264-mobile $mres"
+						if [ "$mobilefirst" = true ]
+						then
+							mobilefirst=false
+							mobile_pass1 "$filepath" "$mmbit" "$mobilelog" $options $filtersfull || break
+						fi
+						mobile_out=$(winpath "$topdir/_site/$url/$mres-h264-mobile.mp4.tmp")
+						mobile_pass2 "$filepath" "$mres" "$mmbit" "$mobilelog" "$mobile_out" $options $filters $audio \
+							&& mv -f "$mobile_out" "$topdir/_site/$url/$mres-h264-mobile.mp4" \
+							|| rm -f "$mobile_out"
+					fi
+				done
+				rm -f "$topdir/_site/$url/ffmpeg-mobile".log "$topdir/_site/$url/ffmpeg-mobile".log.mbtree 2>/dev/null
+			fi
 		fi
 		
 		output_url=""
